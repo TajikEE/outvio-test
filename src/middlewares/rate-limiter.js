@@ -29,9 +29,17 @@ export const rateLimiter =
       // The true boolean means it will expire the item after mentioned time period
       const [_, timeStampItem, added] = result;
 
+      // handle case where remaining limit is not enough for weighted points
+      // example: points = 3 but user has used 9/10 limit. So 1 more request will exceed 10 already
+      const remainingWeightedFraction =
+        limit - timeStampItem.length * points < points;
+
       // The added part makes sure that it only checks for records which are saved to redis,
       // because if too many requests come then redis will return 0 for added which means it is not saved
-      if (timeStampItem.length * points + added > limit) {
+      if (
+        remainingWeightedFraction ||
+        timeStampItem.length * points + added > limit
+      ) {
         const resetTime = moment(parseInt(result[1][1]))
           .add(process.env.WINDOW_SIZE_IN_HOURS, "hours")
           .format("DD/MM/YYYY hh:mm:ss");
